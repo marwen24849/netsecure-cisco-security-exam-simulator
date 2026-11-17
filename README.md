@@ -38,9 +38,9 @@ The importer checks the structure and reports missing IDs, prompts, and answer k
 - 90-minute default exam timer, configurable before each attempt, with 10- and 5-minute warnings and automatic submission.
 - One-question exam view with direct navigation, answer/flag state, unanswered count, and a confirmation before submission.
 - Results at a 70% passing threshold, per-question review, and time-spent reporting.
-- Practice mode with immediate feedback, topic filtering, and configurable question count.
+- Practice mode with shuffled answer choices, immediate feedback, topic filtering, and configurable question count.
 - Exam revision with topic filters, hidden answer keys, explanations, and memory cues for active recall.
-- Weak-topic analytics, attempt history, bookmarks, question search, and JSON/CSV result export.
+- Weak-topic analytics, exam and completed practice-lab history with scores and answer reviews, bookmarks, question search, and JSON/CSV result export.
 - Local persistence for the question bank, settings, bookmarks, practice progress, and attempts.
 
 All interface content is in English. Question content and explanations are provided by the imported bank.

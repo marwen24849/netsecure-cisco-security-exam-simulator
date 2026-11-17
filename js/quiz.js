@@ -60,17 +60,23 @@
     return selected.length === correct.length && selected.every((value, index) => value === correct[index]);
   }
 
-  function correctText(question) {
+  function correctText(question, displayOrder) {
     if (question.type === 'matching') return question.pairs.map(pair => `${pair.left} → ${pair.options[pair.correct]}`).join('; ');
     if (question.type === 'ordering') return question.correctOrder.map(index => question.items[index]).join(' → ');
-    return question.correctAnswers.map(index => `${String.fromCharCode(65 + index)}. ${question.options[index]}`).join(' · ');
+    return question.correctAnswers.map(index => {
+      const displayIndex = Array.isArray(displayOrder) ? displayOrder.indexOf(index) : index;
+      return `${String.fromCharCode(65 + Math.max(0, displayIndex))}. ${question.options[index]}`;
+    }).join(' · ');
   }
 
-  function answerText(question, answer) {
+  function answerText(question, answer, displayOrder) {
     if (!hasAnswer(question, answer)) return 'No answer';
     if (question.type === 'matching') return question.pairs.map((pair, index) => `${pair.left} → ${pair.options[answer[index]]}`).join('; ');
     if (question.type === 'ordering') return answer.map(index => question.items[index]).join(' → ');
-    return answer.map(index => `${String.fromCharCode(65 + index)}. ${question.options[index]}`).join(' · ');
+    return answer.map(index => {
+      const displayIndex = Array.isArray(displayOrder) ? displayOrder.indexOf(index) : index;
+      return `${String.fromCharCode(65 + Math.max(0, displayIndex))}. ${question.options[index]}`;
+    }).join(' · ');
   }
 
   window.NetSecureQuiz = { normalizeBank, makeBlankAnswer, hasAnswer, isCorrect, correctText, answerText };

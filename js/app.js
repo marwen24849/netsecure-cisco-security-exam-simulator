@@ -14,7 +14,7 @@
   };
   const titles = {
     dashboard: 'Overview', 'exam-setup': 'Exam simulator', 'practice-setup': 'Practice lab',
-    revision: 'Exam revision', analytics: 'Learning analytics', history: 'Exam history', bookmarks: 'Saved questions',
+    revision: 'Exam revision', analytics: 'Learning analytics', history: 'Attempt history', bookmarks: 'Saved questions',
     exam: 'Exam in progress', practice: 'Practice session', result: 'Exam results', search: 'Search questions'
   };
 
@@ -96,25 +96,26 @@
   }
   function dashboard() {
     const attempts = state.attempts;
-    const best = attempts.length ? Math.max(...attempts.map(a => Number(a.score) || 0)) : null;
-    const last = attempts[0] || null;
-    const average = attempts.length ? Math.round(attempts.reduce((sum, a) => sum + (Number(a.score) || 0), 0) / attempts.length) : 0;
+    const examAttempts = attempts.filter(attempt => (attempt.type || 'exam') === 'exam');
+    const best = examAttempts.length ? Math.max(...examAttempts.map(a => Number(a.score) || 0)) : null;
+    const last = examAttempts[0] || null;
+    const average = examAttempts.length ? Math.round(examAttempts.reduce((sum, a) => sum + (Number(a.score) || 0), 0) / examAttempts.length) : 0;
     const weak = getTopicStats().filter(item => item.answered > 0).slice(0, 5);
     const incompleteCount = getIncompleteQuestions().length;
-    const history = attempts.slice(0, 7).reverse();
+    const history = examAttempts.slice(0, 7).reverse();
     const chart = history.length ? history.map((attempt, index) => `<div class="score-bar-wrap"><div class="score-bar" style="height:${Math.max(4, Number(attempt.score) || 0)}%" data-value="${Math.round(Number(attempt.score) || 0)}"></div><span class="score-label">${esc(shortDate(attempt.date) || `#${index + 1}`)}</span></div>`).join('') : `<div class="chart-empty">Complete an exam to build your score trend.</div>`;
     const topicRows = weak.length ? weak.map(item => `<div class="topic-row"><span class="topic-name" title="${esc(item.topic)}">${esc(item.topic)}</span><div class="topic-track"><span style="width:${item.score}%"></span></div><span class="topic-score">${item.score}%</span></div>`).join('') : emptyState('◎', 'No topic data yet', 'Your weakest topics appear after your first completed exam.');
     const progressDegrees = average / 100 * 360;
     return `${heading('LEARNING OVERVIEW', 'Good to see you again.', 'Build confidence in network security, one focused session at a time.', `<button class="button button-primary" data-view="exam-setup"><span class="button-icon">▶</span> Start exam</button><button class="button" data-view="practice-setup">Practice mode <span class="button-icon">↗</span></button>`)}
-      <section class="welcome-banner"><div class="welcome-copy"><p class="eyebrow"><span class="live-dot"></span>YOUR SECURITY LEARNING HUB</p><h1>Prepare with clarity.<br />Practice with purpose.</h1><p>Simulate the final, focus on the topics that need attention, and watch your confidence grow over time.</p><div class="welcome-actions"><button class="button button-primary" data-view="exam-setup"><span class="button-icon">▶</span> Start an exam</button><button class="button" data-view="practice-setup">Explore practice lab <span>↗</span></button></div></div><div class="readiness-card"><div class="readiness-ring" style="--progress:${progressDegrees}deg"><div><strong>${attempts.length ? `${average}%` : '—'}</strong><small>average score</small></div></div><div class="readiness-copy"><strong>${attempts.length ? (average >= PASS_MARK ? 'On track for a pass' : 'Keep building momentum') : 'Your readiness starts here'}</strong><span>${attempts.length ? `Passing mark is <b>${PASS_MARK}%</b>. ${average >= PASS_MARK ? 'Keep your skills sharp.' : 'Practice your weakest areas next.'}` : 'Take an exam or practice a topic to create your first learning signal.'}</span></div></div></section>
+      <section class="welcome-banner"><div class="welcome-copy"><p class="eyebrow"><span class="live-dot"></span>YOUR SECURITY LEARNING HUB</p><h1>Prepare with clarity.<br />Practice with purpose.</h1><p>Simulate the final, focus on the topics that need attention, and watch your confidence grow over time.</p><div class="welcome-actions"><button class="button button-primary" data-view="exam-setup"><span class="button-icon">▶</span> Start an exam</button><button class="button" data-view="practice-setup">Explore practice lab <span>↗</span></button></div></div><div class="readiness-card"><div class="readiness-ring" style="--progress:${progressDegrees}deg"><div><strong>${examAttempts.length ? `${average}%` : '—'}</strong><small>average score</small></div></div><div class="readiness-copy"><strong>${examAttempts.length ? (average >= PASS_MARK ? 'On track for a pass' : 'Keep building momentum') : 'Your readiness starts here'}</strong><span>${examAttempts.length ? `Passing mark is <b>${PASS_MARK}%</b>. ${average >= PASS_MARK ? 'Keep your skills sharp.' : 'Practice your weakest areas next.'}` : 'Take an exam or practice a topic to create your first learning signal.'}</span></div></div></section>
       <section class="stat-grid" aria-label="Learning statistics">
         <article class="card stat-card" style="--glow:rgba(102,139,255,.14)"><div class="stat-head"><span>Questions imported</span><span class="stat-icon">▤</span></div><div class="stat-value">${number(state.questions.length)}<small>/ ${number(state.expectedCount)}</small></div><div class="stat-note">${incompleteCount ? `${incompleteCount} source items need answer review` : `Source page lists ${number(state.expectedCount)} questions`}</div></article>
-        <article class="card stat-card" style="--glow:rgba(66,214,162,.12)"><div class="stat-head"><span>Completed attempts</span><span class="stat-icon">◷</span></div><div class="stat-value">${number(attempts.length)}</div><div class="stat-note"><span class="up">●</span> ${attempts.length ? 'Your learning history is saved locally' : 'Your exam history will build here'}</div></article>
+        <article class="card stat-card" style="--glow:rgba(66,214,162,.12)"><div class="stat-head"><span>Completed attempts</span><span class="stat-icon">◷</span></div><div class="stat-value">${number(attempts.length)}</div><div class="stat-note"><span class="up">●</span> ${attempts.length ? `${number(examAttempts.length)} exams · ${number(attempts.length - examAttempts.length)} practice labs saved locally` : 'Your exam and lab history will build here'}</div></article>
         <article class="card stat-card" style="--glow:rgba(67,215,208,.12)"><div class="stat-head"><span>Best score</span><span class="stat-icon">⌁</span></div><div class="stat-value">${best === null ? '—' : `${Math.round(best)}%`}</div><div class="stat-note">${best === null ? 'Complete your first exam to set a best' : best >= PASS_MARK ? 'Above the 70% pass mark' : 'Keep working toward the pass mark'}</div></article>
         <article class="card stat-card" style="--glow:rgba(243,199,107,.1)"><div class="stat-head"><span>Last exam</span><span class="stat-icon">◌</span></div><div class="stat-value">${last ? `${Math.round(Number(last.score) || 0)}%` : '—'}</div><div class="stat-note">${last ? esc(dateLabel(last.date)) : 'No attempt yet'}</div></article>
       </section>
       <section class="dashboard-grid"><article class="card chart-card"><div class="card-header"><div><h2>Exam performance</h2><p>Your recent results at a glance</p></div><div class="chart-legend"><span><i class="legend-dot"></i>Score</span><span>Pass mark ${PASS_MARK}%</span></div></div><div class="card-body"><div class="score-chart"><div class="score-y"><span>100%</span><span>70%</span><span>0%</span></div>${chart}</div></div></article>
-      <article class="card chart-card"><div class="card-header"><div><h2>Focus areas</h2><p>Topics to revisit from your exam history</p></div><button class="button button-sm" data-view="analytics">View analytics ↗</button></div><div class="card-body"><div class="topic-list">${weak.length ? topicRows : topicRows}</div></div></article></section>
+      <article class="card chart-card"><div class="card-header"><div><h2>Focus areas</h2><p>Topics to revisit from your attempt history</p></div><button class="button button-sm" data-view="analytics">View analytics ↗</button></div><div class="card-body"><div class="topic-list">${weak.length ? topicRows : topicRows}</div></div></article></section>
       <section class="quick-links"><button class="quick-link" data-view="exam-setup"><span>▤</span><span class="quick-link-copy"><strong>Exam simulator</strong><small>Timed test · 70% to pass</small></span><span>↗</span></button><button class="quick-link" data-view="practice-setup"><span>◉</span><span class="quick-link-copy"><strong>Practice lab</strong><small>Instant feedback · topic focused</small></span><span>↗</span></button><button class="quick-link" data-view="revision"><span>✦</span><span class="quick-link-copy"><strong>Exam revision</strong><small>Recall answers, then reveal explanations</small></span><span>↗</span></button><button class="quick-link" data-view="bookmarks"><span>☆</span><span class="quick-link-copy"><strong>Saved questions</strong><small>${number(state.bookmarks.length)} questions to revisit</small></span><span>↗</span></button></section>
       <div class="rules-strip"><span>ⓘ</span><span><strong>Exam rules</strong> &nbsp;90 minutes by default · ${PASS_MARK}% to pass · Answers and explanations stay hidden until submission.</span></div>`;
   }
@@ -132,7 +133,7 @@
     const topics = [...new Set(usableQuestions.map(q => q.topic || 'Uncategorized'))].sort((a, b) => a.localeCompare(b));
     const count = usableQuestions.length;
     return `${heading('PRACTICE LAB', 'Learn by doing.', 'Work through focused questions with instant answers and explanations.', `<button class="button" data-action="import">Import questions <span>↗</span></button>`)}
-      <div class="setup-grid"><section class="card setup-card"><h2>Build a practice session</h2><p>Choose a topic or use the full question bank. You can practice the same question as often as you like.</p><div class="form-grid"><div class="field full"><label for="practice-topic">Topic</label><select id="practice-topic"><option value="all">All topics</option>${topics.map(topic => `<option value="${esc(topic)}">${esc(topic)}</option>`).join('')}</select></div><div class="field"><label for="practice-count">Number of questions</label><input id="practice-count" type="number" min="1" max="${Math.max(count, 1)}" value="${Math.min(20, Math.max(count, 1))}" /></div><div class="field"><label for="practice-order">Question order</label><select id="practice-order"><option value="random">Random</option><option value="source">Source order</option></select></div></div><div style="margin-top:21px"><button class="button button-primary" data-action="start-practice"><span class="button-icon">▶</span> Start practice</button></div>${count ? '' : `<div class="practice-feedback incorrect" style="margin-top:16px"><strong>Import a question bank to start</strong>Your sessions will save progress and explain answers as you go.</div>`}</section><aside class="setup-sidebar"><section class="card setup-fact"><h3>Practice mode</h3><div class="fact-row"><span>Feedback</span><strong>Instant after each answer</strong></div><div class="fact-row"><span>Explanations</span><strong>Available per question</strong></div><div class="fact-row"><span>Question pool</span><strong>${number(count)} loaded</strong></div></section><section class="card setup-fact"><h3>Progress snapshot</h3>${Object.keys(state.practiceStats).length ? Object.entries(state.practiceStats).slice(0, 4).map(([id, item]) => `<div class="fact-row"><span>Question ${esc(id)}</span><strong>${number(item.correct || 0)} correct / ${number(item.attempts || 0)} tries</strong></div>`).join('') : `<div class="topic-empty">Your practice progress will show here after your first answer.</div>`}</section></aside></div>`;
+      <div class="setup-grid"><section class="card setup-card"><h2>Build a practice session</h2><p>Choose a topic or use the full question bank. Answer choices are shuffled, and each completed lab is saved to your attempt history.</p><div class="form-grid"><div class="field full"><label for="practice-topic">Topic</label><select id="practice-topic"><option value="all">All topics</option>${topics.map(topic => `<option value="${esc(topic)}">${esc(topic)}</option>`).join('')}</select></div><div class="field"><label for="practice-count">Number of questions</label><input id="practice-count" type="number" min="1" max="${Math.max(count, 1)}" value="${Math.min(20, Math.max(count, 1))}" /></div><div class="field"><label for="practice-order">Question order</label><select id="practice-order"><option value="random">Random</option><option value="source">Source order</option></select></div></div><div style="margin-top:21px"><button class="button button-primary" data-action="start-practice"><span class="button-icon">▶</span> Start practice</button></div>${count ? '' : `<div class="practice-feedback incorrect" style="margin-top:16px"><strong>Import a question bank to start</strong>Your sessions will save progress and explain answers as you go.</div>`}</section><aside class="setup-sidebar"><section class="card setup-fact"><h3>Practice mode</h3><div class="fact-row"><span>Feedback</span><strong>Instant after each answer</strong></div><div class="fact-row"><span>Explanations</span><strong>Available per question</strong></div><div class="fact-row"><span>Question pool</span><strong>${number(count)} loaded</strong></div></section><section class="card setup-fact"><h3>Progress snapshot</h3>${Object.keys(state.practiceStats).length ? Object.entries(state.practiceStats).slice(0, 4).map(([id, item]) => `<div class="fact-row"><span>Question ${esc(id)}</span><strong>${number(item.correct || 0)} correct / ${number(item.attempts || 0)} tries</strong></div>`).join('') : `<div class="topic-empty">Your practice progress will show here after your first answer.</div>`}</section></aside></div>`;
   }
 
   function imageMarkup(question) {
@@ -147,28 +148,31 @@
     if (question.imageMissing || question.imageReference) return `<div class="image-missing"><span>▧</span><span>Exhibit referenced in source: ${esc(question.imageReference || 'image unavailable')}. Add a local image to the question record.</span></div>`;
     return '';
   }
-  function answerMarkup(question, answer, readonly = false, review = false) {
+  function answerMarkup(question, answer, readonly = false, review = false, presentation = null) {
     if (question.type === 'matching') {
       const values = Array.isArray(answer) ? answer : quiz.makeBlankAnswer(question);
       const unused = Array.isArray(question.unusedOptions) && question.unusedOptions.length ? `<p class="answer-hint">Unused option${question.unusedOptions.length === 1 ? '' : 's'}: ${question.unusedOptions.map(esc).join(', ')}.</p>` : '';
-      return `${unused}<div class="matching-list">${question.pairs.map((pair, index) => `<div class="matching-row"><strong>${esc(pair.left)}</strong><select data-pair="${index}" ${readonly ? 'disabled' : ''}><option value="">Choose a match…</option>${pair.options.map((option, optionIndex) => `<option value="${optionIndex}" ${Number(values[index]) === optionIndex ? 'selected' : ''}>${esc(option)}</option>`).join('')}</select></div>`).join('')}</div>`;
+      const pairOrder = presentation && presentation.pairOrder || question.pairs.map((_, pairIndex) => pairIndex);
+      return `${unused}<div class="matching-list">${pairOrder.map(index => { const pair = question.pairs[index]; const order = presentation && presentation.pairs && presentation.pairs[index] || pair.options.map((_, optionIndex) => optionIndex); return `<div class="matching-row"><strong>${esc(pair.left)}</strong><select data-pair="${index}" ${readonly ? 'disabled' : ''}><option value="">Choose a match…</option>${order.map(optionIndex => `<option value="${optionIndex}" ${Number(values[index]) === optionIndex ? 'selected' : ''}>${esc(pair.options[optionIndex])}</option>`).join('')}</select></div>`; }).join('')}</div>`;
     }
     if (question.type === 'ordering') {
       const values = Array.isArray(answer) && answer.length === question.items.length ? answer : quiz.makeBlankAnswer(question);
       return `<div class="ordering-list">${values.map((itemIndex, index) => `<div class="ordering-item"><span class="order-index">${index + 1}</span><span>${esc(question.items[itemIndex])}</span>${readonly ? '' : `<span class="order-controls"><button data-action="order-move" data-from="${index}" data-to="${index - 1}" ${index === 0 ? 'disabled' : ''} aria-label="Move item up">↑</button><button data-action="order-move" data-from="${index}" data-to="${index + 1}" ${index === values.length - 1 ? 'disabled' : ''} aria-label="Move item down">↓</button></span>`}</div>`).join('')}</div>`;
     }
     const selected = Array.isArray(answer) ? answer : [];
-    return `<div class="answer-list">${question.options.map((option, index) => {
+    const order = presentation && presentation.choices || question.options.map((_, index) => index);
+    return `<div class="answer-list">${order.map((index, displayIndex) => {
+      const option = question.options[index];
       const isSelected = selected.includes(index);
       const correct = review && question.correctAnswers.includes(index);
       const wrongSelected = review && isSelected && !correct;
-      return `<button class="answer-option${isSelected ? ' selected' : ''}${correct ? ' correct' : ''}${wrongSelected ? ' incorrect' : ''}" data-answer-index="${index}" ${readonly ? 'disabled' : ''}><span class="answer-letter">${String.fromCharCode(65 + index)}</span><span class="answer-copy">${esc(option)}</span><span class="answer-check">✓</span></button>`;
+      return `<button class="answer-option${isSelected ? ' selected' : ''}${correct ? ' correct' : ''}${wrongSelected ? ' incorrect' : ''}" data-answer-index="${index}" ${readonly ? 'disabled' : ''}><span class="answer-letter">${String.fromCharCode(65 + displayIndex)}</span><span class="answer-copy">${esc(option)}</span><span class="answer-check">✓</span></button>`;
     }).join('')}</div>`;
   }
   function questionContent(question, numberInSession, total, answer, options = {}) {
     const typeLabel = { single: 'Single choice', multiple: 'Select all that apply', matching: 'Matching', ordering: 'Order the steps' }[question.type] || 'Question';
     const hint = question.type === 'multiple' ? 'Select every correct answer.' : question.type === 'matching' ? 'Choose the best match for each item.' : question.type === 'ordering' ? 'Use the arrows to arrange the items in order.' : '';
-    return `<div class="question-meta"><span class="question-number">QUESTION ${numberInSession} / ${total}</span><span class="pill pill-blue">${esc(question.topic || 'Uncategorized')}</span><span class="pill">${typeLabel}</span></div><h2>${esc(question.question)}</h2>${imageMarkup(question)}${hint ? `<p class="answer-hint">${hint}</p>` : ''}${answerMarkup(question, answer, Boolean(options.readonly), Boolean(options.review))}`;
+    return `<div class="question-meta"><span class="question-number">QUESTION ${numberInSession} / ${total}</span><span class="pill pill-blue">${esc(question.topic || 'Uncategorized')}</span><span class="pill">${typeLabel}</span></div><h2>${esc(question.question)}</h2>${imageMarkup(question)}${hint ? `<p class="answer-hint">${hint}</p>` : ''}${answerMarkup(question, answer, Boolean(options.readonly), Boolean(options.review), options.presentation)}`;
   }
   function timerMarkup() {
     const minutes = Math.floor(state.remaining / 60);
@@ -225,12 +229,13 @@
     const question = getQuestion(state.practice.order[state.practice.index]);
     if (!question) return emptyState('◉', 'Question unavailable', 'This item is no longer in the imported question bank.');
     const answer = state.practice.answers[String(question.id)];
+    const presentation = state.practice.presentation[String(question.id)];
     const checked = Boolean(state.practice.checked[String(question.id)]);
     const correct = checked && quiz.isCorrect(question, answer);
     const stat = state.practiceStats[String(question.id)] || { attempts: 0, correct: 0 };
-    const feedback = checked ? `<div class="practice-feedback${correct ? '' : ' incorrect'}"><strong>${correct ? 'Correct answer' : 'Not quite — review the correct answer'}</strong><span><b>Your answer:</b> ${esc(quiz.answerText(question, answer))}</span><br /><span><b>Correct answer:</b> ${esc(quiz.correctText(question))}</span>${question.explanation ? `<br /><span><b>Explanation:</b> ${esc(question.explanation)}</span>` : ''}</div>` : '';
+    const feedback = checked ? `<div class="practice-feedback${correct ? '' : ' incorrect'}"><strong>${correct ? 'Correct answer' : 'Not quite — review the correct answer'}</strong><span><b>Your answer:</b> ${esc(quiz.answerText(question, answer, presentation && presentation.choices))}</span><br /><span><b>Correct answer:</b> ${esc(quiz.correctText(question, presentation && presentation.choices))}</span>${question.explanation ? `<br /><span><b>Explanation:</b> ${esc(question.explanation)}</span>` : ''}</div>` : '';
     const saved = isBookmarked(question.id);
-    return `<div class="exam-topline"><div class="exam-progress-copy"><strong>Question ${state.practice.index + 1}</strong><span>of ${number(state.practice.order.length)} · ${esc(state.practice.topic || 'All topics')}</span></div><span class="pill">${number(stat.attempts)} previous tries</span></div><div class="exam-progress-track"><span style="width:${(state.practice.index + 1) / state.practice.order.length * 100}%"></span></div><section class="card question-card">${questionContent(question, state.practice.index + 1, state.practice.order.length, answer, { readonly: checked })}${feedback}<div class="question-footer"><div class="question-footer-left"><button class="button button-sm ${saved ? 'pill-yellow' : ''}" data-action="toggle-bookmark" data-id="${esc(question.id)}">${saved ? '★ Saved' : '☆ Save question'}</button></div><div class="question-footer-right">${checked ? `<button class="button button-sm" data-action="previous-practice" ${state.practice.index === 0 ? 'disabled' : ''}>← Previous</button><button class="button button-sm button-primary" data-action="next-practice">${state.practice.index === state.practice.order.length - 1 ? 'Finish practice' : 'Next question'} →</button>` : `<button class="button button-sm button-primary" data-action="check-answer" ${quiz.hasAnswer(question, answer) ? '' : 'disabled'}>Check answer</button>`}</div></div></section>`;
+    return `<div class="exam-topline"><div class="exam-progress-copy"><strong>Question ${state.practice.index + 1}</strong><span>of ${number(state.practice.order.length)} · ${esc(state.practice.topic || 'All topics')}</span></div><span class="pill">${number(stat.attempts)} previous tries</span></div><div class="exam-progress-track"><span style="width:${(state.practice.index + 1) / state.practice.order.length * 100}%"></span></div><section class="card question-card">${questionContent(question, state.practice.index + 1, state.practice.order.length, answer, { readonly: checked, presentation })}${feedback}<div class="question-footer"><div class="question-footer-left"><button class="button button-sm ${saved ? 'pill-yellow' : ''}" data-action="toggle-bookmark" data-id="${esc(question.id)}">${saved ? '★ Saved' : '☆ Save question'}</button></div><div class="question-footer-right">${checked ? `<button class="button button-sm" data-action="previous-practice" ${state.practice.index === 0 ? 'disabled' : ''}>← Previous</button><button class="button button-sm button-primary" data-action="next-practice">${state.practice.index === state.practice.order.length - 1 ? 'Finish practice' : 'Next question'} →</button>` : `<button class="button button-sm button-primary" data-action="check-answer" ${quiz.hasAnswer(question, answer) ? '' : 'disabled'}>Check answer</button>`}</div></div></section>`;
   }
 
   function startRevision(topic = 'all') {
@@ -270,27 +275,38 @@
 
   function reviewCard(question, detail, index) {
     const good = Boolean(detail.correct);
-    return `<article class="review-item"><button class="review-summary" data-action="toggle-review" aria-expanded="false"><span class="review-index${good ? '' : ' incorrect'}">${String(index + 1).padStart(2, '0')}</span><span class="review-question">${esc(question.question)}</span><span class="pill ${good ? 'pill-green' : 'pill-red'}">${good ? 'Correct' : detail.answered ? 'Incorrect' : 'Unanswered'}</span><span class="review-chevron">⌄</span></button><div class="review-detail" hidden>${imageMarkup(question)}<p><strong>Your answer:</strong> ${esc(quiz.answerText(question, detail.answer))}</p><p><strong>Correct answer:</strong> ${esc(quiz.correctText(question))}</p>${question.explanation ? `<p><strong>Explanation:</strong> ${esc(question.explanation)}</p>` : ''}</div></article>`;
+    return `<article class="review-item"><button class="review-summary" data-action="toggle-review" aria-expanded="false"><span class="review-index${good ? '' : ' incorrect'}">${String(index + 1).padStart(2, '0')}</span><span class="review-question">${esc(question.question)}</span><span class="pill ${good ? 'pill-green' : 'pill-red'}">${good ? 'Correct' : detail.answered ? 'Incorrect' : 'Unanswered'}</span><span class="review-chevron">⌄</span></button><div class="review-detail" hidden>${imageMarkup(question)}<p><strong>Your answer:</strong> ${esc(quiz.answerText(question, detail.answer, detail.presentation && detail.presentation.choices))}</p><p><strong>Correct answer:</strong> ${esc(quiz.correctText(question, detail.presentation && detail.presentation.choices))}</p>${question.explanation ? `<p><strong>Explanation:</strong> ${esc(question.explanation)}</p>` : ''}</div></article>`;
   }
   function resultView() {
     if (!state.result) return historyView();
     const result = state.result;
-    const pass = result.score >= PASS_MARK;
+    const isPractice = result.type === 'practice';
+    const pass = !isPractice && result.score >= PASS_MARK;
     const details = (result.details || []).filter(detail => getQuestion(detail.id));
     const ringColor = pass ? 'var(--green)' : 'var(--red)';
-    return `${heading('ATTEMPT COMPLETE', 'Your exam results', 'Take a moment to review your score, then use the answer notes to choose what to practice next.', `<button class="button" data-view="dashboard">← Dashboard</button><button class="button button-primary" data-action="retake-exam">Retake exam</button>`)}<section class="card result-hero"><div class="result-score"><div class="score-ring" style="--score:${Math.min(100, Math.max(0, result.score)) * 3.6}deg;--ring-color:${ringColor}"><div><strong>${Math.round(result.score)}%</strong><small>final score</small></div></div><span class="pill ${pass ? 'pill-green' : 'pill-red'}">${pass ? '✓ PASS' : '✕ FAIL'} · ${PASS_MARK}% required</span></div><div class="result-copy"><p class="eyebrow">${pass ? 'STRONG WORK' : 'KEEP BUILDING'}</p><h1>${pass ? 'You passed the exam.' : 'You are getting closer.'}</h1><p>${pass ? 'Your score is above the passing threshold. Review the explanations to keep your knowledge sharp.' : 'Use the missed questions and topic insights below to guide your next practice session.'}</p><div class="result-stats"><div class="result-stat"><strong>${result.correct} / ${result.total}</strong><span>Correct</span></div><div class="result-stat"><strong>${result.incorrect}</strong><span>Incorrect</span></div><div class="result-stat"><strong>${result.unanswered}</strong><span>Unanswered</span></div><div class="result-stat"><strong>${formatDuration(result.timeSpent)}</strong><span>Time used</span></div></div></div></section><div class="heading-actions" style="justify-content:flex-start;margin:0 0 14px"><button class="button button-sm" data-action="review-incorrect">Review incorrect questions</button><button class="button button-sm" data-action="export-results">Export results</button></div><section class="card list-card"><div class="card-header"><div><h2>Detailed answer review</h2><p>${number(details.length)} question${details.length === 1 ? '' : 's'} · Open an item for your answer and explanation</p></div><span class="pill ${pass ? 'pill-green' : 'pill-red'}">${pass ? 'Passed' : 'Needs practice'}</span></div><div class="card-body"><div class="review-list">${details.map((detail, index) => reviewCard(getQuestion(detail.id), detail, index)).join('')}</div></div></section>`;
+    const actions = isPractice
+      ? `<button class="button" data-view="history">Attempt history</button><button class="button button-primary" data-view="practice-setup">Practice another lab</button>`
+      : `<button class="button" data-view="dashboard">← Dashboard</button><button class="button button-primary" data-action="retake-exam">Retake exam</button>`;
+    const status = isPractice ? 'Practice lab' : pass ? `✓ PASS · ${PASS_MARK}% required` : `✕ FAIL · ${PASS_MARK}% required`;
+    return `${heading(isPractice ? 'PRACTICE COMPLETE' : 'ATTEMPT COMPLETE', isPractice ? 'Your practice results' : 'Your exam results', isPractice ? `Review your ${result.topic || 'topic'} lab score and answers.` : 'Take a moment to review your score, then use the answer notes to choose what to practice next.', actions)}
+      <section class="card result-hero"><div class="result-score"><div class="score-ring" style="--score:${Math.min(100, Math.max(0, result.score)) * 3.6}deg;--ring-color:${isPractice ? 'var(--cyan)' : ringColor}"><div><strong>${Math.round(result.score)}%</strong><small>${isPractice ? 'lab score' : 'final score'}</small></div></div><span class="pill ${isPractice ? 'pill-blue' : pass ? 'pill-green' : 'pill-red'}">${status}</span></div><div class="result-copy"><p class="eyebrow">${isPractice ? 'LAB COMPLETE' : pass ? 'STRONG WORK' : 'KEEP BUILDING'}</p><h1>${isPractice ? 'Practice session complete.' : pass ? 'You passed the exam.' : 'You are getting closer.'}</h1><p>${isPractice ? 'Use your answers and explanations to decide what to review next.' : pass ? 'Your score is above the passing threshold. Review the explanations to keep your knowledge sharp.' : 'Use the missed questions and topic insights below to guide your next practice session.'}</p><div class="result-stats"><div class="result-stat"><strong>${result.correct} / ${result.total}</strong><span>Correct</span></div><div class="result-stat"><strong>${result.incorrect}</strong><span>Incorrect</span></div><div class="result-stat"><strong>${result.unanswered}</strong><span>Unanswered</span></div><div class="result-stat"><strong>${formatDuration(result.timeSpent)}</strong><span>Time used</span></div></div></div></section>
+      <div class="heading-actions" style="justify-content:flex-start;margin:0 0 14px"><button class="button button-sm" data-action="review-incorrect">Review incorrect questions</button><button class="button button-sm" data-action="export-results">Export results</button></div><section class="card list-card"><div class="card-header"><div><h2>Detailed answer review</h2><p>${number(details.length)} question${details.length === 1 ? '' : 's'} · Open an item for your answer and explanation</p></div><span class="pill ${isPractice ? 'pill-blue' : pass ? 'pill-green' : 'pill-red'}">${isPractice ? 'Completed' : pass ? 'Passed' : 'Needs practice'}</span></div><div class="card-body"><div class="review-list">${details.map((detail, index) => reviewCard(getQuestion(detail.id), detail, index)).join('')}</div></div></section>`;
   }
 
   function historyView() {
-    const actions = `<button class="button button-sm" data-action="export-results">Export results</button><button class="button button-sm button-primary" data-view="exam-setup">New exam</button>`;
+    const actions = `<button class="button button-sm" data-action="export-results">Export results</button><button class="button button-sm" data-view="practice-setup">New lab</button><button class="button button-sm button-primary" data-view="exam-setup">New exam</button>`;
     const attempts = state.attempts;
-    const rows = attempts.map((attempt, index) => `<div class="table-row"><div class="table-primary"><strong>Network Security Final Exam</strong><small>${esc(dateLabel(attempt.date))} · ${number(attempt.total)} questions</small></div><span>${formatDuration(attempt.timeSpent)}</span><span>${attempt.correct} / ${attempt.total}</span><span class="pill ${attempt.score >= PASS_MARK ? 'pill-green' : 'pill-red'}">${Math.round(attempt.score)}% · ${attempt.score >= PASS_MARK ? 'PASS' : 'FAIL'}</span><button class="button button-sm" data-action="open-attempt" data-index="${index}" aria-label="Review this attempt">↗</button></div>`).join('');
-    return `${heading('YOUR ATTEMPTS', 'Exam history', 'Review previous scores, time spent, and answer-by-answer results.', actions)}<section class="card list-card"><div class="card-header"><div><h2>Previous exams</h2><p>${number(attempts.length)} completed attempt${attempts.length === 1 ? '' : 's'} saved on this device</p></div><span class="pill">70% pass mark</span></div><div class="table-head"><span>Attempt</span><span>Time</span><span>Correct</span><span>Result</span><span></span></div>${rows || `<div class="table-empty">No exam attempts yet. Start a simulated exam to create your first result.</div>`}</section>`;
+    const rows = attempts.map((attempt, index) => {
+      const isPractice = attempt.type === 'practice';
+      const passed = attempt.score >= PASS_MARK;
+      return `<div class="table-row"><div class="table-primary"><strong>${isPractice ? 'Practice lab' : 'Network Security Final Exam'}</strong><small>${esc(dateLabel(attempt.date))} · ${number(attempt.total)} questions${isPractice && attempt.topic ? ` · ${esc(attempt.topic)}` : ''}</small></div><span>${formatDuration(attempt.timeSpent)}</span><span>${attempt.correct} / ${attempt.total}</span><span class="pill ${isPractice ? 'pill-blue' : passed ? 'pill-green' : 'pill-red'}">${Math.round(attempt.score)}% · ${isPractice ? 'LAB' : passed ? 'PASS' : 'FAIL'}</span><button class="button button-sm" data-action="open-attempt" data-index="${index}" aria-label="Review this attempt">↗</button></div>`;
+    }).join('');
+    return `${heading('YOUR ATTEMPTS', 'Attempt history', 'Review completed exams and practice labs, including scores, time, and answers.', actions)}<section class="card list-card"><div class="card-header"><div><h2>Previous exams and labs</h2><p>${number(attempts.length)} completed attempt${attempts.length === 1 ? '' : 's'} saved on this device</p></div><span class="pill">${PASS_MARK}% exam pass mark</span></div><div class="table-head"><span>Attempt</span><span>Time</span><span>Correct</span><span>Result</span><span></span></div>${rows || `<div class="table-empty">No completed attempts yet. Finish an exam or practice lab to save your first result.</div>`}</section>`;
   }
 
   function analyticsView() {
     const stats = getTopicStats().filter(item => item.answered > 0);
-    const attempts = state.attempts;
+    const attempts = state.attempts.filter(attempt => (attempt.type || 'exam') === 'exam');
     const average = attempts.length ? Math.round(attempts.reduce((sum, a) => sum + (Number(a.score) || 0), 0) / attempts.length) : 0;
     const correctTotal = attempts.reduce((sum, a) => sum + (Number(a.correct) || 0), 0);
     const questionTotal = attempts.reduce((sum, a) => sum + (Number(a.total) || 0), 0);
@@ -390,6 +406,11 @@
     for (let i = out.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [out[i], out[j]] = [out[j], out[i]]; }
     return out;
   }
+  function shuffleDifferent(list) {
+    const out = shuffle(list);
+    if (out.length > 1 && out.every((value, index) => value === list[index])) return [...out.slice(1), out[0]];
+    return out;
+  }
   function submitExam(auto = false) {
     if (!state.exam) return;
     if (!auto) {
@@ -409,7 +430,7 @@
     const unanswered = details.filter(detail => !detail.answered).length;
     const duration = state.exam.duration * 60;
     const timeSpent = Math.max(0, Math.min(duration, duration - state.remaining));
-    const attempt = { id: `attempt-${Date.now()}`, date: new Date().toISOString(), total, correct, incorrect: total - correct - unanswered, unanswered, score: total ? correct / total * 100 : 0, timeSpent, includeReview: state.exam.includeReview, details };
+    const attempt = { id: `attempt-${Date.now()}`, type: 'exam', date: new Date().toISOString(), total, correct, incorrect: total - correct - unanswered, unanswered, score: total ? correct / total * 100 : 0, timeSpent, includeReview: state.exam.includeReview, details };
     state.attempts.unshift(attempt);
     saveAttempts();
     state.result = attempt;
@@ -430,7 +451,17 @@
     const count = Math.max(1, Math.min(pool.length, Math.floor(countValue)));
     const sourceOrder = options.sourceOrder || ($('#practice-order') && $('#practice-order').value === 'source');
     if (!sourceOrder) order = shuffle(order);
-    state.practice = { order: order.slice(0, count), index: 0, answers: {}, checked: {}, topic: topic === 'all' ? 'All topics' : topic };
+    const sessionOrder = order.slice(0, count);
+    const presentation = {};
+    const answers = {};
+    sessionOrder.forEach(id => {
+      const question = getQuestion(id);
+      const key = String(id);
+      if (question.type === 'single' || question.type === 'multiple') presentation[key] = { choices: shuffleDifferent(question.options.map((_, index) => index)) };
+      else if (question.type === 'matching') presentation[key] = { pairOrder: shuffleDifferent(question.pairs.map((_, index) => index)), pairs: question.pairs.map(pair => shuffleDifferent(pair.options.map((_, index) => index))) };
+      else if (question.type === 'ordering') answers[key] = shuffleDifferent(question.items.map((_, index) => index));
+    });
+    state.practice = { order: sessionOrder, index: 0, answers, checked: {}, presentation, topic: topic === 'all' ? 'All topics' : topic, startedAt: Date.now() };
     state.view = 'practice';
     render();
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -447,6 +478,26 @@
     state.practiceStats[String(question.id)] = stats;
     storage.savePractice(state.practiceStats);
     render();
+  }
+  function completePractice() {
+    if (!state.practice) return;
+    const details = state.practice.order.map(id => {
+      const question = getQuestion(id);
+      const answer = state.practice.answers[String(id)];
+      const answered = quiz.hasAnswer(question, answer);
+      return { id, topic: question.topic || 'Uncategorized', answer: answer === undefined ? null : answer, answered, correct: answered && quiz.isCorrect(question, answer), presentation: state.practice.presentation[String(id)] || null };
+    });
+    const total = details.length;
+    const correct = details.filter(detail => detail.correct).length;
+    const unanswered = details.filter(detail => !detail.answered).length;
+    const attempt = { id: `practice-${Date.now()}`, type: 'practice', topic: state.practice.topic, date: new Date().toISOString(), total, correct, incorrect: total - correct - unanswered, unanswered, score: total ? correct / total * 100 : 0, timeSpent: Math.max(0, Math.floor((Date.now() - state.practice.startedAt) / 1000)), details };
+    state.attempts.unshift(attempt);
+    saveAttempts();
+    state.practice = null;
+    state.result = attempt;
+    state.view = 'result';
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
   function toggleBookmark(id) {
     if (isBookmarked(id)) state.bookmarks = state.bookmarks.filter(value => String(value) !== String(id));
@@ -479,8 +530,8 @@
     if (format === 'json') {
       content = JSON.stringify(state.attempts, null, 2); type = 'application/json'; filename = 'netsecure-results.json';
     } else {
-      const rows = [['date', 'score', 'status', 'correct', 'incorrect', 'unanswered', 'total', 'time_spent_seconds']];
-      state.attempts.forEach(item => rows.push([item.date, Math.round(item.score), item.score >= PASS_MARK ? 'PASS' : 'FAIL', item.correct, item.incorrect, item.unanswered, item.total, item.timeSpent]));
+      const rows = [['type', 'topic', 'date', 'score', 'status', 'correct', 'incorrect', 'unanswered', 'total', 'time_spent_seconds']];
+      state.attempts.forEach(item => { const isPractice = item.type === 'practice'; rows.push([item.type || 'exam', item.topic || '', item.date, Math.round(item.score), isPractice ? 'COMPLETED' : item.score >= PASS_MARK ? 'PASS' : 'FAIL', item.correct, item.incorrect, item.unanswered, item.total, item.timeSpent]); });
       content = rows.map(row => row.map(value => `"${String(value).replace(/"/g, '""')}"`).join(',')).join('\r\n'); type = 'text/csv'; filename = 'netsecure-results.csv';
     }
     const link = document.createElement('a');
@@ -543,7 +594,7 @@
       case 'submit-exam': submitExam(false); break;
       case 'check-answer': checkPractice(); break;
       case 'previous-practice': if (state.practice && state.practice.index > 0) { state.practice.index--; render(); } break;
-      case 'next-practice': if (state.practice && state.practice.index < state.practice.order.length - 1) { state.practice.index++; render(); } else { state.practice = null; setView('practice-setup'); toast('Practice session complete. Nice work.'); } break;
+      case 'next-practice': if (state.practice && state.practice.index < state.practice.order.length - 1) { state.practice.index++; render(); } else completePractice(); break;
       case 'toggle-bookmark': toggleBookmark(button.dataset.id); break;
       case 'remove-bookmark': event.stopPropagation(); toggleBookmark(button.dataset.id); break;
       case 'order-move': moveOrdering(Number(button.dataset.from), Number(button.dataset.to)); break;
