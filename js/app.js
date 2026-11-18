@@ -40,6 +40,10 @@
     return `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, '0')}s`;
   }
   function getQuestion(id) { return state.questions.find(question => String(question.id) === String(id)); }
+  function getNumericQuestionId(question) {
+    const id = Number(question && question.id);
+    return Number.isSafeInteger(id) && id > 0 ? id : null;
+  }
   function getIncompleteQuestions() { return state.questions.filter(question => question.incomplete === true); }
   function isBookmarked(id) { return state.bookmarks.some(value => String(value) === String(id)); }
   function safeImage(image) {
@@ -132,8 +136,10 @@
     const usableQuestions = state.questions.filter(question => question.incomplete !== true);
     const topics = [...new Set(usableQuestions.map(q => q.topic || 'Uncategorized'))].sort((a, b) => a.localeCompare(b));
     const count = usableQuestions.length;
-    return `${heading('PRACTICE LAB', 'Learn by doing.', 'Work through focused questions with instant answers and explanations.', `<button class="button" data-action="import">Import questions <span>↗</span></button>`)}
-      <div class="setup-grid"><section class="card setup-card"><h2>Build a practice session</h2><p>Choose a topic or use the full question bank. We select the first N available questions, then randomize their display order. Answer choices are shuffled, and each completed lab is saved to your attempt history.</p><div class="form-grid"><div class="field full"><label for="practice-topic">Topic</label><select id="practice-topic"><option value="all">All topics</option>${topics.map(topic => `<option value="${esc(topic)}">${esc(topic)}</option>`).join('')}</select></div><div class="field"><label for="practice-count">Number of questions</label><input id="practice-count" type="number" min="1" max="${Math.max(count, 1)}" value="${Math.min(20, Math.max(count, 1))}" /></div><div class="field"><label for="practice-order">Question order</label><select id="practice-order"><option value="random">Random display order</option><option value="source">Source order</option></select></div></div><div style="margin-top:21px"><button class="button button-primary" data-action="start-practice"><span class="button-icon">▶</span> Start practice</button></div>${count ? '' : `<div class="practice-feedback incorrect" style="margin-top:16px"><strong>Import a question bank to start</strong>Your sessions will save progress and explain answers as you go.</div>`}</section><aside class="setup-sidebar"><section class="card setup-fact"><h3>Practice mode</h3><div class="fact-row"><span>Feedback</span><strong>Instant after each answer</strong></div><div class="fact-row"><span>Explanations</span><strong>Available per question</strong></div><div class="fact-row"><span>Question pool</span><strong>${number(count)} loaded</strong></div></section><section class="card setup-fact"><h3>Progress snapshot</h3>${Object.keys(state.practiceStats).length ? Object.entries(state.practiceStats).slice(0, 4).map(([id, item]) => `<div class="fact-row"><span>Question ${esc(id)}</span><strong>${number(item.correct || 0)} correct / ${number(item.attempts || 0)} tries</strong></div>`).join('') : `<div class="topic-empty">Your practice progress will show here after your first answer.</div>`}</section></aside></div>`;
+    const numericIds = usableQuestions.map(getNumericQuestionId).filter(id => id !== null);
+    const maxQuestionNumber = numericIds.length ? Math.max(...numericIds) : Math.max(count, 1);
+    return `${heading('PRACTICE LAB', 'Learn by doing.', 'Work through focused questions with instant answers and explanations.', `<button class="button" data-action="import">Import questions</button>`)}
+      <div class="setup-grid"><section class="card setup-card"><h2>Build a practice session</h2><p>Choose a topic, a starting question number, and how many questions to answer. The start number is included: 10 questions starting at 100 covers questions 100-109. Answer choices are shuffled, and each completed lab is saved to your attempt history.</p><div class="form-grid"><div class="field full"><label for="practice-topic">Topic</label><select id="practice-topic"><option value="all">All topics</option>${topics.map(topic => `<option value="${esc(topic)}">${esc(topic)}</option>`).join('')}</select></div><div class="field"><label for="practice-start">Start from question</label><input id="practice-start" type="number" min="1" max="${maxQuestionNumber}" value="1" /></div><div class="field"><label for="practice-count">Number of questions</label><input id="practice-count" type="number" min="1" max="${Math.max(count, 1)}" value="${Math.min(20, Math.max(count, 1))}" /></div><div class="field"><label for="practice-order">Question order</label><select id="practice-order"><option value="source" selected>Source order</option><option value="random">Random display order</option></select></div></div><div style="margin-top:21px"><button class="button button-primary" data-action="start-practice">Start practice</button></div>${count ? '' : `<div class="practice-feedback incorrect" style="margin-top:16px"><strong>Import a question bank to start</strong>Your sessions will save progress and explain answers as you go.</div>`}</section><aside class="setup-sidebar"><section class="card setup-fact"><h3>Practice mode</h3><div class="fact-row"><span>Feedback</span><strong>Instant after each answer</strong></div><div class="fact-row"><span>Explanations</span><strong>Available per question</strong></div><div class="fact-row"><span>Question pool</span><strong>${number(count)} loaded</strong></div></section><section class="card setup-fact"><h3>Progress snapshot</h3>${Object.keys(state.practiceStats).length ? Object.entries(state.practiceStats).slice(0, 4).map(([id, item]) => `<div class="fact-row"><span>Question ${esc(id)}</span><strong>${number(item.correct || 0)} correct / ${number(item.attempts || 0)} tries</strong></div>`).join('') : `<div class="topic-empty">Your practice progress will show here after your first answer.</div>`}</section></aside></div>`;
   }
 
   function imageMarkup(question) {
@@ -227,15 +233,15 @@
   function practiceView() {
     if (!state.practice || !state.practice.order.length) return practiceSetup();
     const question = getQuestion(state.practice.order[state.practice.index]);
-    if (!question) return emptyState('◉', 'Question unavailable', 'This item is no longer in the imported question bank.');
+    if (!question) return emptyState('Practice', 'Question unavailable', 'This item is no longer in the imported question bank.');
     const answer = state.practice.answers[String(question.id)];
     const presentation = state.practice.presentation[String(question.id)];
     const checked = Boolean(state.practice.checked[String(question.id)]);
     const correct = checked && quiz.isCorrect(question, answer);
     const stat = state.practiceStats[String(question.id)] || { attempts: 0, correct: 0 };
-    const feedback = checked ? `<div class="practice-feedback${correct ? '' : ' incorrect'}"><strong>${correct ? 'Correct answer' : 'Not quite — review the correct answer'}</strong><span><b>Your answer:</b> ${esc(quiz.answerText(question, answer, presentation && presentation.choices))}</span><br /><span><b>Correct answer:</b> ${esc(quiz.correctText(question, presentation && presentation.choices))}</span>${question.explanation ? `<br /><span><b>Explanation:</b> ${esc(question.explanation)}</span>` : ''}</div>` : '';
+    const feedback = checked ? `<div class="practice-feedback${correct ? '' : ' incorrect'}"><strong>${correct ? 'Correct answer' : 'Not quite - review the correct answer'}</strong><span><b>Your answer:</b> ${esc(quiz.answerText(question, answer, presentation && presentation.choices))}</span><br /><span><b>Correct answer:</b> ${esc(quiz.correctText(question, presentation && presentation.choices))}</span>${question.explanation ? `<br /><span><b>Explanation:</b> ${esc(question.explanation)}</span>` : ''}</div>` : '';
     const saved = isBookmarked(question.id);
-    return `<div class="exam-topline"><div class="exam-progress-copy"><strong>Question ${state.practice.index + 1}</strong><span>of ${number(state.practice.order.length)} · ${esc(state.practice.topic || 'All topics')}</span></div><span class="pill">${number(stat.attempts)} previous tries</span></div><div class="exam-progress-track"><span style="width:${(state.practice.index + 1) / state.practice.order.length * 100}%"></span></div><section class="card question-card">${questionContent(question, state.practice.index + 1, state.practice.order.length, answer, { readonly: checked, presentation })}${feedback}<div class="question-footer"><div class="question-footer-left"><button class="button button-sm ${saved ? 'pill-yellow' : ''}" data-action="toggle-bookmark" data-id="${esc(question.id)}">${saved ? '★ Saved' : '☆ Save question'}</button></div><div class="question-footer-right">${checked ? `<button class="button button-sm" data-action="previous-practice" ${state.practice.index === 0 ? 'disabled' : ''}>← Previous</button><button class="button button-sm button-primary" data-action="next-practice">${state.practice.index === state.practice.order.length - 1 ? 'Finish practice' : 'Next question'} →</button>` : `<button class="button button-sm button-primary" data-action="check-answer" ${quiz.hasAnswer(question, answer) ? '' : 'disabled'}>Check answer</button>`}</div></div></section>`;
+    return `<div class="exam-topline"><div class="exam-progress-copy"><strong>Question ${state.practice.index + 1}</strong><span>of ${number(state.practice.order.length)} | Bank question ${esc(question.id)} | ${esc(state.practice.topic || 'All topics')}</span></div><span class="pill">${number(stat.attempts)} previous tries</span></div><div class="exam-progress-track"><span style="width:${(state.practice.index + 1) / state.practice.order.length * 100}%"></span></div><section class="card question-card">${questionContent(question, state.practice.index + 1, state.practice.order.length, answer, { readonly: checked, presentation })}${feedback}<div class="question-footer"><div class="question-footer-left"><button class="button button-sm ${saved ? 'pill-yellow' : ''}" data-action="toggle-bookmark" data-id="${esc(question.id)}">${saved ? 'Saved' : 'Save question'}</button></div><div class="question-footer-right">${checked ? `<button class="button button-sm" data-action="previous-practice" ${state.practice.index === 0 ? 'disabled' : ''}>Previous</button><button class="button button-sm button-primary" data-action="next-practice">${state.practice.index === state.practice.order.length - 1 ? 'Finish practice' : 'Next question'}</button>` : `<button class="button button-sm button-primary" data-action="check-answer" ${quiz.hasAnswer(question, answer) ? '' : 'disabled'}>Check answer</button>`}</div></div></section>`;
   }
 
   function startRevision(topic = 'all') {
@@ -442,10 +448,23 @@
   function startPractice(options = {}) {
     if (!state.questions.length) { toast('Import a question bank before starting practice.'); return; }
     const topic = options.topic || ($('#practice-topic') && $('#practice-topic').value) || 'all';
-    const pool = (options.questionIds
+    let pool = (options.questionIds
       ? options.questionIds.map(getQuestion).filter(Boolean)
       : topic === 'all' ? [...state.questions] : state.questions.filter(question => (question.topic || 'Uncategorized') === topic)).filter(question => question.incomplete !== true);
-    if (!pool.length) { toast('There are no questions in that topic.', true); return; }
+    const startInput = $('#practice-start');
+    const startNumber = Math.max(1, Math.floor(Number(options.startNumber ?? (startInput && startInput.value) ?? 1) || 1));
+    if (!options.questionIds) {
+      const allIdsAreNumeric = pool.length > 0 && pool.every(question => getNumericQuestionId(question) !== null);
+      if (allIdsAreNumeric) {
+        pool = pool.map(question => ({ question, id: getNumericQuestionId(question) }))
+          .filter(item => item.id >= startNumber)
+          .sort((a, b) => a.id - b.id)
+          .map(item => item.question);
+      } else {
+        pool = pool.slice(startNumber - 1);
+      }
+    }
+    if (!pool.length) { toast(`There are no available questions at or after question ${startNumber}.`, true); return; }
     const countValue = Number(options.count || (options.questionIds && options.questionIds.length) || ($('#practice-count') && $('#practice-count').value) || 20);
     const count = Math.max(1, Math.min(pool.length, Math.floor(countValue)));
     const sourceOrder = options.sourceOrder || ($('#practice-order') && $('#practice-order').value === 'source');
@@ -465,6 +484,7 @@
     render();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
+
   function checkPractice() {
     const question = state.practice && getQuestion(state.practice.order[state.practice.index]);
     if (!question) return;
